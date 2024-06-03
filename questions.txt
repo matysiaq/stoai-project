@@ -1,0 +1,12 @@
+1. Can you deploy for me 5g user plane?
+    Possible follow-up questions:
+        - Now deploy for me remaining nfs
+        - What NFs did you deploy in total?
+2. Can you deploy for me 5g control plane from free5gc?
+    Possible follow-up questions:
+        - Now deploy for me user plane
+        - What NFs did you deploy in total?
+3. Can you deploy for me 5g core from Nokia? (should not deploy, nokia core is not available)
+    Possible follow-up questions:
+        - You are right, Nokia core is not available. Please deploy free5gc instead.
+        - What NFs did you deploy in total?

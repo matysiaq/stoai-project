@@ -1,0 +1,19 @@
+auth:
+  openai_api_key: ''
+  langchain_api_key: ''
+  kubeconfig_file_path: ''
+  git_access_token: ''
+repo:
+  upstream:
+    - nf_type: 5g-core
+      vendor: free5gc
+      domain: github.com
+      name: matysiaq/free5gc
+    - nf_type: 5g-core
+      vendor: oai
+      domain: github.com
+      name: matysiaq/free5gc
+    - nf_type: 5g-ran
+      vendor: oai
+      domain: github.com
+      name: matysiaq/free5gc

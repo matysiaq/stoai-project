@@ -1,0 +1,79 @@
+import os
+import subprocess
+
+from github import Github, Auth
+from langchain_openai import ChatOpenAI
+
+from kubernetes import client as k8sclient
+from kubernetes import config as k8sconfig
+
+from graph.config import config
+from graph.src.utils import gen_rand_str
+
+
+class Wrapper:
+    def __init__(self, cfg: config.Config):
+        self.id = gen_rand_str(16)
+        self.cfg = cfg
+
+        os.environ["OPENAI_API_KEY"] = self.cfg.get_auth_openai_api_key()
+        os.environ["LANGCHAIN_API_KEY"] = self.cfg.get_auth_langchain_api_key()
+        os.environ["LANGCHAIN_TRACING_V2"] = "true"
+        os.environ["LANGCHAIN_PROJECT"] = "TAIA graph - Experiments v1"
+        k8sconfig.load_kube_config(config_file=self.cfg.get_auth_kubeconfig_file_path())
+        # self.llm = ChatOpenAI(model="gpt-3.5-turbo-0125", temperature=0.1)
+        self.llm = ChatOpenAI(model="gpt-4-turbo-2024-04-09", temperature=0.1)
+        # self.llm = ChatOpenAI(model="gpt-4", temperature=0.1)
+        self.k8sv1 = k8sclient.CoreV1Api()
+
+    def get_upstream_repo(self, nf_type: str, nf_vendor: str) -> (bool, str):
+
+        repos = self.cfg.get_repo_upstream()
+        for repo in repos:
+            if repo.nf_type == nf_type and repo.vendor == nf_vendor:
+                g = Github(auth=Auth.Token(f"{self.cfg.get_git_access_token()}"))
+                r = g.get_repo(self.cfg.get_repo_upstream()[0].name)
+                print(f"[Info] Found repository, type[{nf_type}], vendor[{nf_vendor}]: {r.clone_url}")
+                return True, r.clone_url
+
+        info = f"Couldn't find the repository for [{nf_type}, {nf_vendor}]"
+        return False, info
+
+    @staticmethod
+    def clone_git_repo(nf_vendor: str, upstream_repo: str) -> (bool, str):
+        path = f"/home/pmq/workshop/python-programming/taia/graph/cloned-repos/{nf_vendor}"
+        if not os.path.isdir(path):
+            subprocess.run(['git', 'clone', upstream_repo, path])
+            directories = [f for f in os.listdir(path) if os.path.isdir(os.path.join(path, f))]
+            info = f"Cloned to {path}. Found possible NF helm charts: {directories}"
+            print(info)
+            return True, info
+        else:
+            directories = [f for f in os.listdir(path) if os.path.isdir(os.path.join(path, f))]
+
+            info = f"Given repository [{path}] already exists. Found possible NF helm charts: {directories}"
+            print(info)
+            return False, info
+
+    def deploy_nf(self, nf_name: str, local_repo_path: str, nf_helm_chart_name: str) -> (bool, str):
+        path = local_repo_path+"/"+nf_helm_chart_name
+        if os.path.exists(path):
+            subprocess.run(['helm', 'install', "--kubeconfig", f"{self.cfg.get_auth_kubeconfig_file_path()}", f"{nf_helm_chart_name}", path])
+
+            info = f"Deployed NF[{nf_name}], chart [{local_repo_path}/{nf_helm_chart_name}]"
+            print(info)
+            return True, info
+        else:
+            info = f"Provided helm chart {path} does not exist!"
+            print(info)
+            return False, info
+
+    def hello_msg(self):
+        msg = self.llm.invoke(
+            """
+            Please pretend that you are Telco AI Assistant (TAIA). You are able to deploy 5G Network Functions.
+            Generate oneliner welcome msg.
+            """
+        )
+
+        return msg.content

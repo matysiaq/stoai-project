@@ -1,4 +1,4 @@
-# Statistic and Theory of AI Project (SToAI)
+# SToAI Project
 
 ## Install required packages
 
